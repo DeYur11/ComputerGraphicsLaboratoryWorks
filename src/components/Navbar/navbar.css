@@ -1,0 +1,28 @@
+/* Navbar.css */
+
+nav {
+    background: linear-gradient(to left, #001f3f, #003366); /* Gradient from navy to a darker shade */
+    padding: 15px 0;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+li {
+    cursor: pointer;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+li:hover {
+    background-color: #005cbf;
+    color: #fff;
+}
