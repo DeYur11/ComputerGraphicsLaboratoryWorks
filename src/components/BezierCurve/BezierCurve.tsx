@@ -20,7 +20,6 @@ export const BezierCurve = () => {
         const returnMatrix: number[][] = [];
         returnMatrix.pop();
         const n = points.length-1;
-        console.log("Called");
 
         for(let i = 0; i < n+1; i++){
             const arrayToAdd: number[] = [];
@@ -30,7 +29,6 @@ export const BezierCurve = () => {
             }
             returnMatrix[i] = arrayToAdd;
         }
-        console.log("Matrix of coefficients:");
         for(let i = 0; i < returnMatrix.length; i++){
             for(let j = 0; j < returnMatrix[i].length; j++){
                 if(returnMatrix[i][j] === -0){
@@ -38,9 +36,24 @@ export const BezierCurve = () => {
                 }
             }
         }
-        console.log(returnMatrix);
         return returnMatrix;
+    }
+    function drawDerivative(numberOfDots: number){
+        if(points.length < 2){
+            return;
+        }
+        const ctx = canvasRef.current?.getContext("2d");
+        if (!ctx) return;
+        let start = points[0];
 
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo((points[1].x+start.x)/2, (points[1].y+start.y)/2);
+        ctx.stroke();
+
+        const end = points[points.length-1];
+        ctx.moveTo(end.x, end.y);
+        ctx.lineTo((points[points.length-2].x+end.x)/2, (points[points.length-2].y+end.y)/2);
+        ctx.stroke();
     }
 
     type Matrix = number[][];
@@ -52,6 +65,7 @@ export const BezierCurve = () => {
 
         // Check if the matrices can be multiplied
         if (colsA !== rowsB) {
+            console.log(colsA, rowsB)
             console.error("Number of columns in the first matrix must be equal to the number of rows in the second matrix.");
             return null;
         }
@@ -109,8 +123,10 @@ export const BezierCurve = () => {
 
             let multiplieMatrix = multiplyMatrices(arrayOfT, matrixOfCoef);
             if(!multiplieMatrix) return;
-
             let pointX: number | null;
+
+            console.log("Multiplied matrix: ");
+            console.log(multiplieMatrix);
 
             // @ts-ignore
             pointX = multiplyMatrices(multiplieMatrix, pointsMatrixX)[0][0];
@@ -139,10 +155,15 @@ export const BezierCurve = () => {
     }
 
     useEffect(() => {
-
         const ctx = canvasRef.current?.getContext("2d");
         let canvas = canvasRef.current;
         if (!canvas || !ctx) return;
+
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.scale(1, -1);
+
+
+
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight*0.8;
 
@@ -150,6 +171,7 @@ export const BezierCurve = () => {
         if(points.length != 0){
             if(isParametrical){
                 drawBezierCurveParametrically(400);
+                drawDerivative(400);
             }else{
                 drawBezierCurveMatrixMethod(400);
             }
@@ -157,6 +179,7 @@ export const BezierCurve = () => {
 
 
         points.forEach((point, index) => {
+            console.log(point);
             ctx.beginPath();
             ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
             ctx.fillStyle = '#e74c3c';
@@ -241,7 +264,6 @@ export const BezierCurve = () => {
         ctx.stroke();
     }
 
-
     function getPolinomBernshtein(step: number): [number[]]{
 
         const returnPolinom: [number[]] = [[]]
@@ -308,16 +330,13 @@ export const BezierCurve = () => {
             }
             return updatedPoints;
         });
-
     }
 
 
     return (
         <>
             <canvas
-
                 ref={canvasRef}
-
                 onClick={handleCanvasClick}
                 onMouseMove={handleMouseMove}
                 width={600}

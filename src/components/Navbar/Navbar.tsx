@@ -12,9 +12,8 @@ const Navbar: React.FC<NavbarProps> = ({ setActivePage }) => {
         <div>
             <nav>
                 <ul>
-                    <li onClick={() => handlePageChange('home')}>Home</li>
-                    <li onClick={() => handlePageChange('about')}>About</li>
-                    <li onClick={() => handlePageChange('contact')}>Contact</li>
+                    <li onClick={() => handlePageChange('Bezier Curve')}>Bezier Curve</li>
+                    <li onClick={() => handlePageChange('about')}>Fractals</li>
                 </ul>
             </nav>
         </div>
