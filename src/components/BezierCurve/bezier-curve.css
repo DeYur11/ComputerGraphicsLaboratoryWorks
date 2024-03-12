@@ -5,3 +5,7 @@ canvas{
 .bezier-curve-canvas{
     width: 100%;
 }
+
+.bezier-edit-points-list li{
+    color: black;
+}

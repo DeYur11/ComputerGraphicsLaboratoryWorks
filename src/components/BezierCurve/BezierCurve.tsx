@@ -11,10 +11,12 @@ export const BezierCurve = () => {
     const [points, setPoints] = useState<Point[]>([]);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [polinomBernsteine, setPolinomBernstein] = useState<[number[]]>([[]]);
-    const [zoom, setZoom] = useState(1);
     const isParametrical = true;
     const [matrixOfGlobalKoef, setMatrixOfGlobalKoef] = useState<number[][]>([])
-
+    const [isLastPointFixed, setIsLastPointFixed] = useState(false);
+    const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
+    const [curveColor, setCurveColor] = useState<string>("");
+    const [tangentColor, setTangentColor] = useState<string>("");
 
     function getMatrixOfKoef(): number[][]{
         const returnMatrix: number[][] = [];
@@ -45,15 +47,21 @@ export const BezierCurve = () => {
         const ctx = canvasRef.current?.getContext("2d");
         if (!ctx) return;
         let start = points[0];
-
+        // @ts-ignore
+        ctx.strokeStyle = tangentColor;
         ctx.moveTo(start.x, start.y);
         ctx.lineTo((points[1].x+start.x)/2, (points[1].y+start.y)/2);
+        ctx.closePath();
         ctx.stroke();
 
         const end = points[points.length-1];
         ctx.moveTo(end.x, end.y);
+
         ctx.lineTo((points[points.length-2].x+end.x)/2, (points[points.length-2].y+end.y)/2);
         ctx.stroke();
+        ctx.closePath();
+        ctx.strokeStyle = "000";
+        console.log(tangentColor);
     }
 
     type Matrix = number[][];
@@ -125,9 +133,6 @@ export const BezierCurve = () => {
             if(!multiplieMatrix) return;
             let pointX: number | null;
 
-            console.log("Multiplied matrix: ");
-            console.log(multiplieMatrix);
-
             // @ts-ignore
             pointX = multiplyMatrices(multiplieMatrix, pointsMatrixX)[0][0];
             // @ts-ignore
@@ -149,9 +154,12 @@ export const BezierCurve = () => {
             ctx.moveTo(point.x, point.y);
         });
         ctx.lineTo(points[points.length-1].x, points[points.length-1].y)
-        ctx.strokeStyle = '#3498db'; // Set the stroke color
+        // @ts-ignore
+        ctx.strokeStyle = curveColor;
         ctx.lineWidth = 2; // Set the line width
         ctx.stroke();
+        ctx.closePath();
+        console.log(curveColor);
     }
 
     useEffect(() => {
@@ -179,10 +187,9 @@ export const BezierCurve = () => {
 
 
         points.forEach((point, index) => {
-            console.log(point);
             ctx.beginPath();
             ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            ctx.fillStyle = '#e74c3c';
+            ctx.fillStyle = (isLastPointFixed && index === points.length - 1) || index === selectedPointIndex ? '#2ecc71' : '#e74c3c';
 
             ctx.fill();
             ctx.strokeStyle = '#fff';
@@ -194,7 +201,7 @@ export const BezierCurve = () => {
             ctx.fillText(index.toString(), point.x - 3, point.y - 8);
 
         });
-    }, [points]);
+    });
 
     function factorialize(num: number): number {
         if (num === 0 || num === 1)
@@ -221,7 +228,6 @@ export const BezierCurve = () => {
         if(points.length <= 1){
             return;
         }
-
         const step = 1/numberOfDots;
         let polinome: [number[]];
         if(polinomBernsteine[0].length != points.length){
@@ -230,11 +236,7 @@ export const BezierCurve = () => {
         }else{
             polinome = polinomBernsteine;
         }
-
         let pointsCurve: Point[] = [];
-
-
-
         for(let i = 0; i < polinome.length; i++){
             let newPointX = 0;
             let newPointY = 0;
@@ -247,21 +249,25 @@ export const BezierCurve = () => {
                 y: newPointY
             })
         }
-
-
-
         const ctx = canvasRef.current?.getContext("2d");
         if (!ctx) return;
         let start = points[0];
+        ctx.beginPath();
         ctx.moveTo(start.x, start.y);
         pointsCurve.forEach((point) => {
             ctx.lineTo(point.x, point.y);
             ctx.moveTo(point.x, point.y);
         });
         ctx.lineTo(points[points.length-1].x, points[points.length-1].y)
-        ctx.strokeStyle = '#3498db'; // Set the stroke color
+        // @ts-ignore
+        ctx.strokeStyle = curveColor; // Set the stroke color
         ctx.lineWidth = 2; // Set the line width
+        ctx.closePath();
         ctx.stroke();
+
+        // ctx.strokeStyle ="black";
+        // ctx.stroke();
+        console.log(curveColor);
     }
 
     function getPolinomBernshtein(step: number): [number[]]{
@@ -280,34 +286,53 @@ export const BezierCurve = () => {
             returnPolinom.push(tmpPolinome);
             t += step;
         }
-        console.log("Bernstein Polinom: ");
-        console.log(returnPolinom);
         return returnPolinom;
     }
 
 
     function handleCanvasClick(e:  React.MouseEvent<HTMLElement>){
-        console.log("Clicked");
         const canvas: HTMLCanvasElement | null  = canvasRef.current;
-        console.log(e);
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
         const newPointX = e.clientX - rect.x;
         const newPointY = e.clientY - rect.y;
 
-        setPoints((points)=> {
-            let newPoints: Point[] = [...points];
-            newPoints.push({
-                x: newPointX,
-                y: newPointY
-            })
-            return newPoints;
-        });
+
+
+        if(selectedPointIndex != null){
+            setPoints((prevPoints) => {
+                const updatedPoints = [...prevPoints];
+                updatedPoints[selectedPointIndex] = {
+                    x: newPointX,
+                    y: newPointY
+                }
+                setSelectedPointIndex(null);
+                return updatedPoints;
+            });
+        }else{
+            setPoints((points)=> {
+                if(isLastPointFixed){
+                    points = [];
+                    setIsLastPointFixed(false);
+
+                }
+                let newPoints: Point[] = [...points];
+                newPoints.push({
+                    x: newPointX,
+                    y: newPointY
+                })
+                return newPoints;
+            });
+        }
+
 
     }
 
     function handleMouseMove(event: React.MouseEvent<HTMLCanvasElement>){
+        if(isLastPointFixed && selectedPointIndex === null){
+            return;
+        }
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -321,17 +346,52 @@ export const BezierCurve = () => {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
-        setPoints((prevPoints) => {
-            const updatedPoints = [...prevPoints];
-            if (updatedPoints.length > 0) {
-                updatedPoints[updatedPoints.length - 1] = { x, y };
-            }else{
-                updatedPoints[0] = { x, y };
-            }
-            return updatedPoints;
-        });
+
+        if(selectedPointIndex != null && isLastPointFixed){
+            setPoints((prevPoints) => {
+                const updatedPoints = [...prevPoints];
+                updatedPoints[selectedPointIndex] = { x, y };
+                return updatedPoints;
+            });
+        }else{
+            setPoints((prevPoints) => {
+                const updatedPoints = [...prevPoints];
+                if (updatedPoints.length > 0 && !isLastPointFixed) {
+                    updatedPoints[updatedPoints.length - 1] = { x, y };
+                }else{
+                    updatedPoints[0] = { x, y };
+                }
+                return updatedPoints;
+            });
+        }
+
     }
 
+    const handleFixLastPoint = () => {
+        if(points.length < 2){
+            return;
+        }
+        let newPoints = points;
+        newPoints.pop();
+        console.log(newPoints);
+        setPoints(newPoints);
+        setIsLastPointFixed(true);
+    };
+
+    const handleSelectPoint = (index: number) => {
+        // Select a control point for movement
+        setSelectedPointIndex(index);
+        console.log(index);
+    };
+
+    function handleCurveColorChange(value: string) {
+        setCurveColor(value);
+    }
+
+
+    function handleTangentColorChange(value: string) {
+        setTangentColor(value);
+    }
 
     return (
         <>
@@ -344,6 +404,30 @@ export const BezierCurve = () => {
                 style={{ border: '1px solid #ddd', cursor: 'crosshair' }}
                 className={"bezier-curve-canvas"}
             ></canvas>
+            <button onClick={handleFixLastPoint} disabled={isLastPointFixed}>
+                Fix Last Point
+            </button>
+            <p>Select point to move it</p>
+            <ul className={"bezier-edit-points-list"}>
+                {points.map((_, index) => (
+                    <li key={index} onClick={() => handleSelectPoint(index)}>
+                        Point {index}
+                    </li>
+                ))}
+            </ul>
+            <p>Choose color of curve</p>
+            <input
+                type="color"
+                value={curveColor}
+                onChange={(e) => handleCurveColorChange(e.target.value)}
+            />
+            <p>Choose color of tangent</p>
+            <input
+                type="color"
+                value={tangentColor}
+                onChange={(e) => handleTangentColorChange(e.target.value)}
+            />
+
         </>
     );
 };
