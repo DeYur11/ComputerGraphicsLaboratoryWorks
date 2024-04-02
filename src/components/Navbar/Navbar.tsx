@@ -13,7 +13,7 @@ const Navbar: React.FC<NavbarProps> = ({ setActivePage }) => {
             <nav>
                 <ul>
                     <li onClick={() => handlePageChange('Bezier Curve')}>Bezier Curve</li>
-                    <li onClick={() => handlePageChange('about')}>Fractals</li>
+                    <li onClick={() => handlePageChange('Fractals')}>Fractals</li>
                 </ul>
             </nav>
         </div>

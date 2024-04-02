@@ -7,16 +7,49 @@ type Point = {
     x: number,
     y: number
 }
+type Interval = {
+    start: number,
+    amount: number,
+    end: number;
+}
+
+function sumOfDiagonals(matrix: number[][]): number | undefined {
+    // Перевірка на квадратність матриці
+    if (!matrix.every(row => row.length === matrix.length)) {
+        console.error('Матриця повинна бути квадратною.');
+        return;
+    }
+
+    let mainDiagonalSum = 0;
+    let secondaryDiagonalSum = 0;
+    const n = matrix.length;
+
+    for (let i = 0; i < n; i++) {
+        mainDiagonalSum += matrix[i][i];
+        secondaryDiagonalSum += matrix[i][n - 1 - i];
+    }
+
+    console.log('Сума головної діагоналі:', mainDiagonalSum);
+    console.log('Сума побічної діагоналі:', secondaryDiagonalSum);
+
+    return mainDiagonalSum + secondaryDiagonalSum;
+}
+
 export const BezierCurve = () => {
     const [points, setPoints] = useState<Point[]>([]);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [polinomBernsteine, setPolinomBernstein] = useState<[number[]]>([[]]);
-    const isParametrical = true;
     const [matrixOfGlobalKoef, setMatrixOfGlobalKoef] = useState<number[][]>([])
     const [isLastPointFixed, setIsLastPointFixed] = useState(false);
     const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null);
     const [curveColor, setCurveColor] = useState<string>("");
     const [tangentColor, setTangentColor] = useState<string>("");
+    const [parametric, setParametric] = useState<boolean>(true);
+    const [interval, setInterval] = useState<Interval>({start: 0, end: 0, amount: 0});
+    const [curvesPoints, setCurvesPoints] = useState<Point[]>([]);
+    const [finePoints, setFinePoints] = useState<Point[]>([]);
+    const [selectedRow, setSelectedRow] = useState<number>(1);
+    const [suma, setSuma] = useState<number>(0);
 
     function getMatrixOfKoef(): number[][]{
         const returnMatrix: number[][] = [];
@@ -49,6 +82,7 @@ export const BezierCurve = () => {
         let start = points[0];
         // @ts-ignore
         ctx.strokeStyle = tangentColor;
+        ctx.beginPath();
         ctx.moveTo(start.x, start.y);
         ctx.lineTo((points[1].x+start.x)/2, (points[1].y+start.y)/2);
         ctx.closePath();
@@ -62,6 +96,83 @@ export const BezierCurve = () => {
         ctx.closePath();
         ctx.strokeStyle = "000";
         console.log(tangentColor);
+    }
+    const drawCoordinateSystem = (context: CanvasRenderingContext2D) => {
+        // @ts-ignore
+        context = canvasRef.current?.getContext("2d");
+        const width = context.canvas.width;
+        const height = context.canvas.height;
+        context.strokeStyle = "#000";
+        context.lineWidth = 2;
+
+        context.beginPath();
+        context.moveTo(0, height / 2);
+        context.lineTo(width, height / 2);
+        context.lineTo(width - 10, height / 2 - 5);
+        context.moveTo(width, height / 2);
+        context.lineTo(width - 10, height / 2 + 5);
+        context.stroke();
+        context.closePath();
+
+        context.strokeStyle = "#000";
+        context.beginPath();
+        context.moveTo(width / 2, 0);
+        context.lineTo(width / 2, height);
+        context.moveTo(width / 2 - 5, 10);
+        context.lineTo(width / 2, 0);
+        context.strokeStyle = "#000";
+        context.moveTo(width / 2, 0);
+        context.lineTo(width / 2 + 5, 10);
+        context.stroke();
+        context.closePath();
+
+        context.strokeStyle = "#000";
+        context.font = "12px Arial";
+        context.fillStyle = "#000";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+
+        context.fillText("X", width - 10, height / 2 + 20);
+
+        context.strokeStyle = "#000";
+        context.fillText("Y", width / 2 + 10, 10);
+
+        context.moveTo(0, height / 2);
+        for (let i = 0; i < width / 20; i++) {
+            context.moveTo(0 + i * 20, height / 2 + 5);
+            context.lineTo(0 + i * 20, height / 2 - 5);
+        }
+        context.stroke();
+
+        context.moveTo(width / 2, height);
+        for (let i = 0; i < height / 20; i++) {
+            context.moveTo(width / 2 - 5, height - i * 20);
+            context.lineTo(width / 2 + 5, height - i * 20);
+        }
+        context.stroke();
+        //Намалюємо одиниці
+
+        context.fillText('1', calculateTrueValue(1, 0, width, height).x, calculateTrueValue(1, 0, width, height).y+20);
+        context.fillText('1', calculateTrueValue(0, 1, width, height).x - 20, calculateTrueValue(0, 1, width, height).y);
+        context.fillText('0', calculateTrueValue(0, 0, width, height).x - 10, calculateTrueValue(0, 0, width, height).y+10);
+    };
+    const calculateTrueValue = (x: number, y: number, width: number, height: number) => {
+        return {
+            x: width/2 + x*20,
+            y: height/2 - y*20
+        }
+    }
+    const calculateCoordValue = (x: number, y: number) => {
+        const width = canvasRef.current?.width;
+        const height = canvasRef.current?.height;
+
+
+        return {
+            // @ts-ignore
+            x: (x - width/2)/20,
+            // @ts-ignore
+            y: (y - height/2)/(-20)
+        }
     }
 
     type Matrix = number[][];
@@ -97,7 +208,7 @@ export const BezierCurve = () => {
         if(points.length <= 1){
             return;
         }
-
+        console.log(polinomBernsteine)
         const step = 1/numberOfDots;
         let t = 0;
         const n = points.length - 1;
@@ -143,11 +254,13 @@ export const BezierCurve = () => {
             })
             t += step;
         }
+        setCurvesPoints(pointsCurve);
 
 
         const ctx = canvasRef.current?.getContext("2d");
         if (!ctx) return;
         let start = points[0];
+        ctx.beginPath();
         ctx.moveTo(start.x, start.y);
         pointsCurve.forEach((point) => {
             ctx.lineTo(point.x, point.y);
@@ -159,13 +272,14 @@ export const BezierCurve = () => {
         ctx.lineWidth = 2; // Set the line width
         ctx.stroke();
         ctx.closePath();
-        console.log(curveColor);
     }
 
     useEffect(() => {
         const ctx = canvasRef.current?.getContext("2d");
+
         let canvas = canvasRef.current;
         if (!canvas || !ctx) return;
+        ctx.strokeStyle="000";
 
         ctx.translate(canvas.width/2, canvas.height/2);
         ctx.scale(1, -1);
@@ -174,14 +288,15 @@ export const BezierCurve = () => {
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight*0.8;
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawCoordinateSystem(ctx);
         if(points.length != 0){
-            if(isParametrical){
-                drawBezierCurveParametrically(400);
+            if(parametric){
+                drawBezierCurveParametrically(800);
                 drawDerivative(400);
             }else{
-                drawBezierCurveMatrixMethod(400);
+                drawBezierCurveMatrixMethod(800);
+                drawDerivative(400);
             }
         }
 
@@ -201,7 +316,7 @@ export const BezierCurve = () => {
             ctx.fillText(index.toString(), point.x - 3, point.y - 8);
 
         });
-    });
+    }, [points, isLastPointFixed, selectedPointIndex, curveColor, tangentColor, parametric, finePoints, selectedRow]);
 
     function factorialize(num: number): number {
         if (num === 0 || num === 1)
@@ -232,6 +347,7 @@ export const BezierCurve = () => {
         let polinome: [number[]];
         if(polinomBernsteine[0].length != points.length){
             polinome = getPolinomBernshtein(step);
+            console.log(polinome);
             setPolinomBernstein(polinome);
         }else{
             polinome = polinomBernsteine;
@@ -249,6 +365,7 @@ export const BezierCurve = () => {
                 y: newPointY
             })
         }
+        setCurvesPoints(pointsCurve);
         const ctx = canvasRef.current?.getContext("2d");
         if (!ctx) return;
         let start = points[0];
@@ -260,13 +377,10 @@ export const BezierCurve = () => {
         });
         ctx.lineTo(points[points.length-1].x, points[points.length-1].y)
         // @ts-ignore
-        ctx.strokeStyle = curveColor; // Set the stroke color
-        ctx.lineWidth = 2; // Set the line width
+        ctx.strokeStyle = curveColor;
+        ctx.lineWidth = 2;
         ctx.closePath();
         ctx.stroke();
-
-        // ctx.strokeStyle ="black";
-        // ctx.stroke();
         console.log(curveColor);
     }
 
@@ -387,10 +501,34 @@ export const BezierCurve = () => {
     function handleCurveColorChange(value: string) {
         setCurveColor(value);
     }
-
-
     function handleTangentColorChange(value: string) {
         setTangentColor(value);
+    }
+
+    function displayPointsInInterval(){
+        const width = canvasRef.current?.width;
+        const height = canvasRef.current?.height;
+        if(!width || !height) return;
+        const intervalStart = calculateTrueValue(interval.start, 0, width, height).x;
+        const intervalEnd = calculateTrueValue(interval.end, 0, width, height).x;
+        console.log(interval);
+        let counter = interval.amount;
+        const returnArr: Point[] = [];
+        for(let i of curvesPoints){
+            if(counter <= 0){
+                break;
+            }
+            if(i.x > intervalStart && i.x < intervalEnd){
+                console.log(i);
+                counter--;
+                returnArr.push(i);
+            }
+        }
+        if(returnArr.length === 0){
+            alert("There is no points in this range");
+        }else{
+            setFinePoints(returnArr);
+        }
     }
 
     return (
@@ -428,6 +566,82 @@ export const BezierCurve = () => {
                 onChange={(e) => handleTangentColorChange(e.target.value)}
             />
 
+            <input
+                type={"checkbox"}
+                value={"Parametric"}
+                id={"parametric"}
+                onChange={(e) => {
+                    setParametric(!parametric);
+                }}
+            ></input>
+            <label htmlFor={"parametric"}>Matrix method</label>
+            <p>Dsds</p>
+
+
+            <label htmlFor={"start-position"}>Start-position</label>
+            <input id={"start-position"}
+                   step={"0.1"}
+
+                   type={"number"} onChange={(e)=>{
+                // @ts-ignore
+                const {name, value} = e.target;
+                setInterval((prevInterval) => {
+                    const newInterval = prevInterval;
+                    newInterval.start = Number(value);
+                    console.log(newInterval);
+                    return newInterval;
+                });
+            }}/>
+            <label htmlFor={"end-position"} >End-position</label>
+            <input id="end-position"
+                   step={"0.1"}
+                   type={"number"} onChange={(e)=>{
+                const {name, value} = e.target;
+                setInterval((prevInterval) => {
+                    const newInterval = prevInterval;
+                    newInterval.end = Number(value);
+                    console.log(newInterval);
+                    return newInterval;
+                });
+            }}/>
+            <label htmlFor={"dots-amount"}>Points-amount</label>
+            <input min={0} id={"dots-amount"} type={"number"} onChange={(e)=>{
+                const {name, value} = e.target;
+                setInterval((prevInterval) => {
+                    const newInterval = prevInterval;
+                    newInterval.amount = Number(value);
+                    console.log(newInterval);
+                    return newInterval;
+                });
+            }}/>
+            <button onClick={displayPointsInInterval}>Calculate points</button>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Point</th>
+                        <th>Coordinates</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                {finePoints.map((finePoint) => (
+                        <tr>
+                            <td>{`${calculateCoordValue(finePoint.x, finePoint.y).x}, ${calculateCoordValue(finePoint.x, finePoint.y).y}`}</td>
+                        </tr>
+                ))}
+                    </tbody>
+                </table>
+            <input type={"number"} min={1} max={points.length} onChange={(e)=>{
+                const {name, value} = e.target;
+                setSelectedRow(Number(value));
+                console.log(matrixOfGlobalKoef[Number(value)-1]);
+                console.log(matrixOfGlobalKoef);
+            }}/>
+            <div>
+                {matrixOfGlobalKoef[selectedRow-1]? matrixOfGlobalKoef[selectedRow-1].join(" "): ""}
+            </div>
+            <div>
+                {sumOfDiagonals(matrixOfGlobalKoef)}
+            </div>
         </>
     );
 };
