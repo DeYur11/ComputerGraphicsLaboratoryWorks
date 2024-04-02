@@ -27,23 +27,6 @@ const FractalCanvas: React.FC = () => {
             }
             return maxIter;
         };
-        // const deriv = (z: Complex): Complex =>{
-        //     let newZ = z.pow(3);
-        //     return newZ.mul(4);
-        // }
-        // const func = (z: Complex): Complex =>{
-        //     let newZ = z.pow(4).sub(1);
-        //     return newZ;
-        // }
-        // const fractal = (z: Complex, c: Complex): number => {
-        //     for(let i = 0; i < maxIter; i++){
-        //         let nextZ = z.sub(func(z).div(deriv(z)));
-        //         if(Math.abs(nextZ.sub(z).re) < 0.01 || Math.abs(nextZ.sub(z).im) < 0.01){
-        //             return i;
-        //         }
-        //     }
-        //     return maxIter;
-        // }
 
         const plotFractal = () => {
             for (let px = 0; px < resolution; px++) {
@@ -55,6 +38,8 @@ const FractalCanvas: React.FC = () => {
 
                     const brightness = iterations === maxIter ? 255 : (3*iterations / maxIter) * 255;
                     //.fillStyle = 'rgba(${brightness},${brightness},${brightness}, 1)';
+
+                    // Планктон
                     if(brightness > 192){
                         ctx.fillStyle = `rgba(${0},${12*brightness/24},${brightness*12/24}, 1)`;
                     }else if(brightness > 192 - 64){
@@ -63,6 +48,43 @@ const FractalCanvas: React.FC = () => {
                         ctx.fillStyle = `rgba(${2*brightness/24},${19*brightness/24},${3*brightness/24}, 1)`;
                     }else{
                         ctx.fillStyle = `rgba(${brightness/24},${brightness/24},${22*brightness/24}, 1)`;
+                    }
+
+                    // Cанта Клаус
+                    if (brightness > 192) {
+                        ctx.fillStyle = `rgba(${brightness * 22 / 24}, ${brightness * 4 / 24}, ${0}, 1)`;
+                    } else if (brightness > 192 - 64) {
+                        ctx.fillStyle = `rgba(${6 * brightness / 24}, ${7 * brightness / 24}, ${9 * brightness / 24}, 1)`;
+                    } else if (brightness > 192 - 128) {
+                        ctx.fillStyle = `rgba(${3 * brightness / 24}, ${15 * brightness / 24}, ${2 * brightness / 24}, 1)`;
+                    } else {
+                        ctx.fillStyle = `rgba(${22 * brightness / 24}, ${brightness / 24}, ${brightness / 24}, 1)`;
+                    }
+
+                    //Малинівка
+                    if (brightness > 192) {
+                        ctx.fillStyle = `rgba(${brightness * 12 / 24}, ${0}, ${brightness * 12 / 24}, 1)`;
+                    } else if (brightness > 192 - 64) {
+                        ctx.fillStyle = `rgba(${7 * brightness / 24}, ${9 * brightness / 24}, ${6 * brightness / 24}, 1)`;
+                    } else if (brightness > 192 - 128) {
+                        ctx.fillStyle = `rgba(${19 * brightness / 24}, ${2 * brightness / 24}, ${3 * brightness / 24}, 1)`;
+                    } else {
+                        ctx.fillStyle = `rgba(${22 * brightness / 24}, ${brightness / 24}, ${brightness / 24}, 1)`;
+                    }
+
+                    // Дюна
+                    if (brightness > 192 + 30) {
+                        ctx.fillStyle = `rgba(${brightness * 12 / 24}, ${9 * brightness / 24}, ${3 * brightness / 24}, 1)`;
+                    } else if (brightness > 192) {
+                        ctx.fillStyle = `rgba(${19 * brightness / 24}, ${2 * brightness / 24}, ${3 * brightness / 24}, 1)`;
+                    } else if (brightness > 192 - 64) {
+                        ctx.fillStyle = `rgba(${10 * brightness / 24}, ${9 * brightness / 24}, ${6 * brightness / 24}, 1)`;
+                    } else if (brightness > 192 - 128) {
+                        ctx.fillStyle = `rgba(${8 * brightness / 24}, ${4 * brightness / 24}, ${2 * brightness / 24}, 1)`;
+                    } else if (brightness > 192 - 192) {
+                        ctx.fillStyle = `rgba(${6 * brightness / 24}, ${4 * brightness / 24}, ${3 * brightness / 24}, 1)`;
+                    } else {
+                        ctx.fillStyle = `rgba(${4 * brightness / 24}, ${2 * brightness / 24}, ${1 * brightness / 24}, 1)`;
                     }
 
                     ctx.fillRect(px, py, 1, 1);
