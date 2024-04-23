@@ -1,4 +1,11 @@
 .fractals__canvas{
-    height: 600px;
-    width: 600px;
+    height: 900px;
+    width: 1000px;
+}
+
+.algo_fract{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }

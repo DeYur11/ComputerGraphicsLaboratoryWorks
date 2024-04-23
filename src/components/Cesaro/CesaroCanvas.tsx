@@ -6,12 +6,14 @@ type Point = {
     x: number;
     y: number;
 }
+
 const CesaroCanvas: React.FC = () => {
     const [angle, setAngle] = useState<number>(60);
-    const [startX, setStartX] = useState<number>(50); // Initial starting x-coordinate
-    const [startY, setStartY] = useState<number>(400); // Initial starting y-coordinate
-    const [endX, setEndX] = useState<number>(400); // Initial ending x-coordinate
-    const [endY, setEndY] = useState<number>(400); // Initial ending y-coordinate
+    const [startX, setStartX] = useState<number>(50);
+    const [startY, setStartY] = useState<number>(400);
+    const [endX, setEndX] = useState<number>(400);
+    const [endY, setEndY] = useState<number>(400);
+    const [iterations, setIterations] = useState<number>(3);
 
     const handleAngleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setAngle(Number(event.target.value));
@@ -31,6 +33,10 @@ const CesaroCanvas: React.FC = () => {
 
     const handleEndYChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setEndY(Number(event.target.value));
+    };
+
+    const handleIterationsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setIterations(Number(event.target.value));
     };
 
     const drawLine = (ctx: CanvasRenderingContext2D, from: Point, to: Point) => {
@@ -107,16 +113,23 @@ const CesaroCanvas: React.FC = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
         drawCesaroFractal(ctx, startX, startY, endX, endY);
-    }, [angle, startX, startY, endX, endY]);
+    }, [angle, startX, startY, endX, endY, iterations]);
 
     const drawCesaroFractal = (ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number) => {
         const firstPoint: Point = { x: startX, y: startY };
         const secondPoint: Point = { x: endX, y: endY };
 
-        const iterations = 3;
         const degree = angle;
 
         drawKochLine(ctx, firstPoint, secondPoint, iterations, degree);
+    };
+
+    const handleDownloadImage = () => {
+        const canvas = document.getElementById('cesaroCanvas') as HTMLCanvasElement;
+        const link = document.createElement('a');
+        link.download = 'cesaro_fractal.png';
+        link.href = canvas.toDataURL();
+        link.click();
     };
 
     return (
@@ -157,6 +170,15 @@ const CesaroCanvas: React.FC = () => {
                 value={endY}
                 onChange={handleEndYChange}
             />
+            <label htmlFor="iterationsInput">Iterations:</label>
+            <input
+                min={"0"}
+                type="number"
+                id="iterationsInput"
+                value={iterations}
+                onChange={handleIterationsChange}
+            />
+            <button onClick={handleDownloadImage}>Download Image</button>
         </div>
     );
 };

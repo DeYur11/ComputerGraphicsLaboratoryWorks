@@ -6,13 +6,14 @@ import {BezierCurve} from "./components/BezierCurve/BezierCurve";
 import FractalCanvas from "./components/Fractals/Fractal";
 import CesaroFractal from "./components/Cesaro/CesaroCanvas";
 import {FractalContainer} from "./components/FractalsContainer/FractalContainer";
+import {Images} from "./components/Images/Images";
 
 
 interface Props {
     imageUrl: string;
 }
 const App: React.FC = () => {
-    const [activePage, setActivePage] = useState<string>('Fractals');
+    const [activePage, setActivePage] = useState<string>('Images');
 
     return (
         <div>
@@ -20,6 +21,7 @@ const App: React.FC = () => {
             <div>
                 {activePage === 'Bezier Curve' && <BezierCurve/>}
                 {activePage === 'Fractals' && <FractalContainer/>}
+                {activePage === 'Images' && <Images/>}
                 {/*{activePage === 'contact' && <h1>Contact Us</h1>}*/}
                 {/* Add more pages as needed */}
             </div>
