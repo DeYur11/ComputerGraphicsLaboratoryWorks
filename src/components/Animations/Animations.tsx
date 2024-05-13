@@ -10,6 +10,8 @@ const Animations: React.FC = () => {
     const [targetX, setTargetX] = useState<number|null>(null);
     const [targetY, setTargetY] = useState<number|null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [zoom, setZoom] = useState<number>(1);
+    const [targetZoom, setTargetZoom] = useState<number>(1);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -24,9 +26,10 @@ const Animations: React.FC = () => {
         const animate = () => {
             if (isRotating) {
                 setRotationAngle((prevAngle) => prevAngle + 1);
+                console.log("ROTATING");
             }
             draw(ctx);
-            animationFrameId = requestAnimationFrame(animate);
+            if(isRotating) animationFrameId = requestAnimationFrame(animate);
         };
 
         // Clear canvas
@@ -40,13 +43,14 @@ const Animations: React.FC = () => {
             ctx.moveTo(x, 0);
             ctx.lineTo(x, ctx.canvas.height);
             // Draw X-axis ticks
-            ctx.fillText(`${(x - ctx.canvas.width / 2) / gridSize}`, x, ctx.canvas.height / 2 + 10);
+
+            ctx.fillText(`${((x - ctx.canvas.width / 2) / (gridSize*zoom)).toFixed(2)}`, x, ctx.canvas.height / 2 + 10);
         }
         for (let y = gridSize; y < ctx.canvas.height; y += gridSize) {
             ctx.moveTo(0, y);
             ctx.lineTo(ctx.canvas.width, y);
             // Draw Y-axis ticks
-            ctx.fillText(`${(ctx.canvas.height / 2 - y) / gridSize}`, ctx.canvas.width / 2 - 20, y);
+            ctx.fillText(`${((ctx.canvas.height / 2 - y) / (gridSize*zoom)).toFixed(2)}`, ctx.canvas.width / 2 - 20, y);
         }
 
         const arrowLength = 10;
@@ -73,6 +77,7 @@ const Animations: React.FC = () => {
         ctx.stroke();
 
         animationFrameId = requestAnimationFrame(animate);
+
 
         return () => cancelAnimationFrame(animationFrameId);
     });  // Added isRotating to dependency array
@@ -114,16 +119,6 @@ const Animations: React.FC = () => {
         return [squarePoint1, squarePoint2];
     }
 
-    const getRotationMatrix = (angle: number): number[][] => {
-        const cos = Math.cos(angle * Math.PI / 180);
-        const sin = Math.sin(angle * Math.PI / 180);
-        return [
-            [cos, -sin, 0],
-            [sin, cos, 0],
-            [0, 0, 1]
-        ];
-    };
-
     const draw = (ctx: CanvasRenderingContext2D) => {
         if (!ctx) return;
 
@@ -132,24 +127,30 @@ const Animations: React.FC = () => {
         const centerY = (y1 + y2) / 2;
 
         const [squarePoint1, squarePoint2] = findSquarePoints({x: x1, y: y1}, {x: x2, y: y2});
-        // Create a matrix containing all square vertices
-        const squareVertices = [
-            [x1-centerX, y1-centerY, 1],
-            [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
-            [x2-centerX, y2-centerY, 1],
-            [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
-        ];
+            let squareVertices = [
+                [x1-centerX, y1-centerY, 1],
+                [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
+                [x2-centerX, y2-centerY, 1],
+                [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
+            ];
+
         let rotationAngle = 2;
         // Combined transformation matrix
-        const transformationMatrix = [
-            [Math.cos(rotationAngle * Math.PI / 180), -Math.sin(rotationAngle * Math.PI / 180), 0],
-            [Math.sin(rotationAngle * Math.PI / 180), Math.cos(rotationAngle * Math.PI / 180), 0],
-            [0, 0, 1]
-        ];
+        let transformedVertices: number[][] = squareVertices;
+        if(isRotating){
+            const transformationMatrix = [
+                [Math.cos(rotationAngle * Math.PI / 180), -Math.sin(rotationAngle * Math.PI / 180), 0],
+                [Math.sin(rotationAngle * Math.PI / 180), Math.cos(rotationAngle * Math.PI / 180), 0],
+                [0, 0, 1]
+            ];
+            transformedVertices = multiplyMatrices(transformedVertices, transformationMatrix);
+        }
 
 
-        // Apply transformation to all square vertices
-        let transformedVertices = multiplyMatrices(squareVertices, transformationMatrix);
+
+
+
+
 
         if(targetX != null && targetY != null && Math.abs(centerX - targetX) > 1 && Math.abs(centerY - targetY) > 1){
             console.log(targetX, targetY)
@@ -219,6 +220,11 @@ const Animations: React.FC = () => {
         setIsRotating(false);
     };
 
+    const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<number>>) => {
+        const value = parseFloat(e.target.value);
+        setter(value || 1);
+    };
+
     return (
         <div>
             <label>
@@ -237,8 +243,13 @@ const Animations: React.FC = () => {
                 Y2:
                 <input type="number" value={y2} onChange={(e) => handleInputChange(e, setY2)} />
             </label>
+            <label>
+                Zoom X:
+                <input type="number" value={zoom} step="0.1" onChange={(e) => handleZoomChange(e, setZoom)} />
+            </label>
             <button onClick={startRotation}>Start Rotation</button>
             <button onClick={stopRotation}>Stop Rotation</button>
+
             <canvas ref={canvasRef} width={500} height={500} style={{ border: '1px solid black' }} onClick={handleClick}></canvas>
         </div>
     );
