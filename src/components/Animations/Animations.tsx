@@ -7,12 +7,13 @@ const Animations: React.FC = () => {
     const [y2, setY2] = useState<number>(200);
     const [rotationAngle, setRotationAngle] = useState<number>(0);
     const [isRotating, setIsRotating] = useState<boolean>(false);
-    const [targetX, setTargetX] = useState<number>(100);
-    const [targetY, setTargetY] = useState<number>(100);
+    const [targetX, setTargetX] = useState<number|null>(null);
+    const [targetY, setTargetY] = useState<number|null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
+
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
@@ -24,78 +25,173 @@ const Animations: React.FC = () => {
             if (isRotating) {
                 setRotationAngle((prevAngle) => prevAngle + 1);
             }
-            drawRotatedSquare(ctx);
+            draw(ctx);
             animationFrameId = requestAnimationFrame(animate);
         };
+
+        // Clear canvas
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        // Draw coordinate grid
+        const gridSize = 50;
+        ctx.beginPath();
+        ctx.strokeStyle = '#ccc';
+        for (let x = gridSize; x < ctx.canvas.width; x += gridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, ctx.canvas.height);
+            // Draw X-axis ticks
+            ctx.fillText(`${(x - ctx.canvas.width / 2) / gridSize}`, x, ctx.canvas.height / 2 + 10);
+        }
+        for (let y = gridSize; y < ctx.canvas.height; y += gridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(ctx.canvas.width, y);
+            // Draw Y-axis ticks
+            ctx.fillText(`${(ctx.canvas.height / 2 - y) / gridSize}`, ctx.canvas.width / 2 - 20, y);
+        }
+
+        const arrowLength = 10;
+        const arrowWidth = 10;
+        const arrowY = 20;
+
+        // Draw arrow near Y-axis
+        ctx.moveTo(ctx.canvas.width / 2 - arrowWidth / 2, arrowY);
+        ctx.lineTo(ctx.canvas.width / 2 + arrowWidth / 2, arrowY);
+        ctx.lineTo(ctx.canvas.width / 2, 0);
+        ctx.lineTo(ctx.canvas.width / 2 - arrowWidth / 2, arrowY);
+        ctx.moveTo(ctx.canvas.width / 2 + arrowWidth / 2, arrowY);
+        ctx.lineTo(ctx.canvas.width / 2, arrowY - arrowLength);
+
+
+        ctx.moveTo(ctx.canvas.width - 2*arrowLength, ctx.canvas.height / 2 - arrowWidth/2);
+        ctx.lineTo(ctx.canvas.width, ctx.canvas.height / 2);
+        ctx.lineTo(ctx.canvas.width - 2*arrowLength, ctx.canvas.height / 2 + arrowWidth/2);
+        ctx.lineTo(ctx.canvas.width - 2*arrowLength, ctx.canvas.height / 2 - arrowWidth/2 );
+        ctx.moveTo(ctx.canvas.width, ctx.canvas.height / 2 + arrowWidth/2);
+        ctx.lineTo(ctx.canvas.width + 2*arrowLength, ctx.canvas.height / 2);
+
+
+        ctx.stroke();
 
         animationFrameId = requestAnimationFrame(animate);
 
         return () => cancelAnimationFrame(animationFrameId);
-    });
+    });  // Added isRotating to dependency array
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const centerX = (x1 + x2) / 2;
-        const centerY = (y1 + y2) / 2;
-
-        if(centerX != targetX || centerY != targetY){
-            drawMovedSquare(ctx);
-        }
-    });
-
-    const drawMovedSquare = (ctx: CanvasRenderingContext2D) => {
-        if(!ctx) return;
-
-
+    interface Point {
+        x: number;
+        y: number;
     }
-    const drawRotatedSquare= (ctx: CanvasRenderingContext2D) => {
+    function findSquarePoints(diagPoint1: Point, diagPoint2: Point): [Point, Point] {
+        // Step 1: Calculate the midpoint of the diagonal
+        const midpoint: Point = {
+            x: (diagPoint1.x + diagPoint2.x) / 2,
+            y: (diagPoint1.y + diagPoint2.y) / 2
+        };
+
+        // Step 2: Calculate the vector from one diagonal point to the midpoint
+        const vector: Point = {
+            x: midpoint.x - diagPoint1.x,
+            y: midpoint.y - diagPoint1.y
+        };
+
+        // Step 3: Rotate the vector by 90 degrees to get a perpendicular vector
+        const perpendicularVector: Point = {
+            x: -vector.y,
+            y: vector.x
+        };
+
+        // Step 4: Add the perpendicular vector to both the midpoint and the other diagonal point
+        const squarePoint1: Point = {
+            x: midpoint.x + perpendicularVector.x,
+            y: midpoint.y + perpendicularVector.y
+        };
+
+        const squarePoint2: Point = {
+            x: midpoint.x - perpendicularVector.x,
+            y: midpoint.y - perpendicularVector.y
+        };
+
+        return [squarePoint1, squarePoint2];
+    }
+
+    const getRotationMatrix = (angle: number): number[][] => {
+        const cos = Math.cos(angle * Math.PI / 180);
+        const sin = Math.sin(angle * Math.PI / 180);
+        return [
+            [cos, -sin, 0],
+            [sin, cos, 0],
+            [0, 0, 1]
+        ];
+    };
+
+    const draw = (ctx: CanvasRenderingContext2D) => {
         if (!ctx) return;
 
         const size = Math.min(Math.abs(x2 - x1), Math.abs(y2 - y1));
         const centerX = (x1 + x2) / 2;
         const centerY = (y1 + y2) / 2;
-        const halfSize = size / 2;
 
-        const topLeftX = centerX - halfSize;
-        const topLeftY = centerY - halfSize;
+        const [squarePoint1, squarePoint2] = findSquarePoints({x: x1, y: y1}, {x: x2, y: y2});
+        // Create a matrix containing all square vertices
+        const squareVertices = [
+            [x1-centerX, y1-centerY, 1],
+            [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
+            [x2-centerX, y2-centerY, 1],
+            [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
+        ];
+        let rotationAngle = 2;
+        // Combined transformation matrix
+        const transformationMatrix = [
+            [Math.cos(rotationAngle * Math.PI / 180), -Math.sin(rotationAngle * Math.PI / 180), 0],
+            [Math.sin(rotationAngle * Math.PI / 180), Math.cos(rotationAngle * Math.PI / 180), 0],
+            [0, 0, 1]
+        ];
 
-        const topRightX = centerX + halfSize;
-        const topRightY = centerY - halfSize;
 
-        const bottomLeftX = centerX - halfSize;
-        const bottomLeftY = centerY + halfSize;
+        // Apply transformation to all square vertices
+        let transformedVertices = multiplyMatrices(squareVertices, transformationMatrix);
 
-        const bottomRightX = centerX + halfSize;
-        const bottomRightY = centerY + halfSize;
-
-        const rotatedTopLeft = rotatePoint(centerX, centerY, topLeftX, topLeftY, rotationAngle);
-        const rotatedTopRight = rotatePoint(centerX, centerY, topRightX, topRightY, rotationAngle);
-        const rotatedBottomLeft = rotatePoint(centerX, centerY, bottomLeftX, bottomLeftY, rotationAngle);
-        const rotatedBottomRight = rotatePoint(centerX, centerY, bottomRightX, bottomRightY, rotationAngle);
-
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        if(targetX != null && targetY != null && Math.abs(centerX - targetX) > 1 && Math.abs(centerY - targetY) > 1){
+            console.log(targetX, targetY)
+            console.log(transformedVertices);
+            const translationMatrix = [
+                [1, 0, 0],
+                [0, 1, 0],
+                [(targetX - centerX)/10, (targetY - centerY)/10, 1]
+            ]
+            transformedVertices = multiplyMatrices(transformedVertices, translationMatrix);
+            console.log(transformedVertices);
+        }
+        console.log(transformedVertices);
         ctx.beginPath();
-        ctx.moveTo(rotatedTopLeft.x, rotatedTopLeft.y);
-        ctx.lineTo(rotatedTopRight.x, rotatedTopRight.y);
-        ctx.lineTo(rotatedBottomRight.x, rotatedBottomRight.y);
-        ctx.lineTo(rotatedBottomLeft.x, rotatedBottomLeft.y);
+        ctx.moveTo(transformedVertices[0][0]+centerX, transformedVertices[0][1]+centerY);
+        ctx.lineTo(transformedVertices[1][0]+centerX, transformedVertices[1][1]+centerY);
+        ctx.lineTo(transformedVertices[2][0]+centerX, transformedVertices[2][1]+centerY);
+        ctx.lineTo(transformedVertices[3][0]+centerX, transformedVertices[3][1]+centerY);
+
         ctx.closePath();
         ctx.fillStyle = 'blue';
         ctx.fill();
+       setX1(transformedVertices[0][0]+centerX);
+       setY1(transformedVertices[0][1]+centerY);
+
+       setX2(transformedVertices[2][0]+centerX);
+       setY2(transformedVertices[2][1]+centerY);
     };
 
-    const rotatePoint = (cx: number, cy: number, x: number, y: number, angle: number) => {
-        const radians = (Math.PI / 180) * angle;
-        const cos = Math.cos(radians);
-        const sin = Math.sin(radians);
-        const nx = cos * (x - cx) - sin * (y - cy) + cx;
-        const ny = sin * (x - cx) + cos * (y - cy) + cy;
-        return { x: nx, y: ny };
+    const multiplyMatrices = (a: number[][], b: number[][]) => {
+        const result: number[][] = [];
+        for (let i = 0; i < a.length; i++) {
+            result[i] = [];
+            for (let j = 0; j < b[0].length; j++) {
+                let sum = 0;
+                for (let k = 0; k < a[0].length; k++) {
+                    sum += a[i][k] * b[k][j];
+                }
+                result[i][j] = sum;
+            }
+        }
+        return result;
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<number>>) => {
@@ -110,7 +206,7 @@ const Animations: React.FC = () => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-
+        console.log("Clicked")
         setTargetX(mouseX);
         setTargetY(mouseY);
     };
