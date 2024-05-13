@@ -1,0 +1,48 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.header {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.file-input {
+    margin-bottom: 20px;
+}
+
+.button-group {
+    margin-bottom: 20px;
+}
+
+.canvas-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.canvas {
+    border: 1px solid #ccc;
+    margin-right: 20px;
+    max-width: 800px;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.checkbox-label {
+    margin-left: 10px;
+}
+
+.action-button {
+    margin-bottom: 20px;
+}
+
+.range-input {
+    width: 100%;
+}
