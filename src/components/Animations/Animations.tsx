@@ -12,6 +12,8 @@ const Animations: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [zoom, setZoom] = useState<number>(1);
     const [targetZoom, setTargetZoom] = useState<number>(1);
+    const [squareColor, setSquareColor] = useState<string>('blue');
+
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -32,24 +34,21 @@ const Animations: React.FC = () => {
             if(isRotating) animationFrameId = requestAnimationFrame(animate);
         };
 
-        // Clear canvas
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        // Draw coordinate grid
         const gridSize = 50;
         ctx.beginPath();
         ctx.strokeStyle = '#ccc';
         for (let x = gridSize; x < ctx.canvas.width; x += gridSize) {
             ctx.moveTo(x, 0);
             ctx.lineTo(x, ctx.canvas.height);
-            // Draw X-axis ticks
 
             ctx.fillText(`${((x - ctx.canvas.width / 2) / (gridSize*zoom)).toFixed(2)}`, x, ctx.canvas.height / 2 + 10);
         }
         for (let y = gridSize; y < ctx.canvas.height; y += gridSize) {
             ctx.moveTo(0, y);
             ctx.lineTo(ctx.canvas.width, y);
-            // Draw Y-axis ticks
+
             ctx.fillText(`${((ctx.canvas.height / 2 - y) / (gridSize*zoom)).toFixed(2)}`, ctx.canvas.width / 2 - 20, y);
         }
 
@@ -57,14 +56,12 @@ const Animations: React.FC = () => {
         const arrowWidth = 10;
         const arrowY = 20;
 
-        // Draw arrow near Y-axis
         ctx.moveTo(ctx.canvas.width / 2 - arrowWidth / 2, arrowY);
         ctx.lineTo(ctx.canvas.width / 2 + arrowWidth / 2, arrowY);
         ctx.lineTo(ctx.canvas.width / 2, 0);
         ctx.lineTo(ctx.canvas.width / 2 - arrowWidth / 2, arrowY);
         ctx.moveTo(ctx.canvas.width / 2 + arrowWidth / 2, arrowY);
         ctx.lineTo(ctx.canvas.width / 2, arrowY - arrowLength);
-
 
         ctx.moveTo(ctx.canvas.width - 2*arrowLength, ctx.canvas.height / 2 - arrowWidth/2);
         ctx.lineTo(ctx.canvas.width, ctx.canvas.height / 2);
@@ -77,8 +74,6 @@ const Animations: React.FC = () => {
         ctx.stroke();
 
         animationFrameId = requestAnimationFrame(animate);
-
-
         return () => cancelAnimationFrame(animationFrameId);
     });  // Added isRotating to dependency array
 
@@ -123,16 +118,42 @@ const Animations: React.FC = () => {
         if (!ctx) return;
 
         const size = Math.min(Math.abs(x2 - x1), Math.abs(y2 - y1));
-        const centerX = (x1 + x2) / 2;
-        const centerY = (y1 + y2) / 2;
 
-        const [squarePoint1, squarePoint2] = findSquarePoints({x: x1, y: y1}, {x: x2, y: y2});
+
+
+        let trueX1 = x1;
+        let trueY1 = y1;
+
+        let trueX2 = x2;
+        let trueY2 = y2;
+
+
+        if(targetZoom != zoom){
+            trueX1 = (x1 - ctx.canvas.width/2)*(zoom/targetZoom) + ctx.canvas.width/2;
+            trueY1 = (y1 - ctx.canvas.height/2)*(zoom/targetZoom) + ctx.canvas.height/2;
+
+            trueX2 = (x2 - ctx.canvas.width/2)*(zoom/targetZoom) + ctx.canvas.width/2;
+            trueY2 = (y2 - ctx.canvas.height/2)*(zoom/targetZoom) + ctx.canvas.height/2;
+            setTargetZoom(zoom);
+        }
+
+
+        let centerX = (trueX1 + trueX2) / 2;
+        let centerY = (trueY1 + trueY2) / 2;
+
+
+        console.log(trueX1)
+        console.log(x1)
+
+        const [squarePoint1, squarePoint2] = findSquarePoints({x: trueX1, y: trueY1}, {x: trueX2, y: trueY2});
             let squareVertices = [
-                [x1-centerX, y1-centerY, 1],
+                [trueX1-centerX, trueY1-centerY, 1],
                 [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
-                [x2-centerX, y2-centerY, 1],
+                [trueX2-centerX, trueY2-centerY, 1],
                 [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
             ];
+
+        console.log(squareVertices);
 
         let rotationAngle = 2;
         // Combined transformation matrix
@@ -163,21 +184,31 @@ const Animations: React.FC = () => {
             transformedVertices = multiplyMatrices(transformedVertices, translationMatrix);
             console.log(transformedVertices);
         }
+
         console.log(transformedVertices);
+        transformedVertices[0][0] = transformedVertices[0][0]+centerX
+        transformedVertices[0][1] = transformedVertices[0][1]+centerY
+        transformedVertices[1][0] = transformedVertices[1][0]+centerX;
+        transformedVertices[1][1] = transformedVertices[1][1]+centerY
+        transformedVertices[2][0] = transformedVertices[2][0]+centerX;
+        transformedVertices[2][1] = transformedVertices[2][1]+centerY
+        transformedVertices[3][0] = transformedVertices[3][0]+centerX;
+        transformedVertices[3][1] += centerY;
+
+
         ctx.beginPath();
-        ctx.moveTo(transformedVertices[0][0]+centerX, transformedVertices[0][1]+centerY);
-        ctx.lineTo(transformedVertices[1][0]+centerX, transformedVertices[1][1]+centerY);
-        ctx.lineTo(transformedVertices[2][0]+centerX, transformedVertices[2][1]+centerY);
-        ctx.lineTo(transformedVertices[3][0]+centerX, transformedVertices[3][1]+centerY);
+        ctx.moveTo(transformedVertices[0][0], transformedVertices[0][1]);
+        ctx.lineTo(transformedVertices[1][0], transformedVertices[1][1]);
+        ctx.lineTo(transformedVertices[2][0], transformedVertices[2][1]);
+        ctx.lineTo(transformedVertices[3][0], transformedVertices[3][1]);
 
         ctx.closePath();
-        ctx.fillStyle = 'blue';
+        ctx.fillStyle = squareColor;
         ctx.fill();
-       setX1(transformedVertices[0][0]+centerX);
-       setY1(transformedVertices[0][1]+centerY);
-
-       setX2(transformedVertices[2][0]+centerX);
-       setY2(transformedVertices[2][1]+centerY);
+       setX1(transformedVertices[0][0]);
+       setY1(transformedVertices[0][1]);
+       setX2(transformedVertices[2][0]);
+       setY2(transformedVertices[2][1]);
     };
 
     const multiplyMatrices = (a: number[][], b: number[][]) => {
@@ -220,6 +251,10 @@ const Animations: React.FC = () => {
         setIsRotating(false);
     };
 
+    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSquareColor(e.target.value); // Update square color state
+    };
+
     const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<number>>) => {
         const value = parseFloat(e.target.value);
         setter(value || 1);
@@ -247,6 +282,12 @@ const Animations: React.FC = () => {
                 Zoom X:
                 <input type="number" value={zoom} step="0.1" onChange={(e) => handleZoomChange(e, setZoom)} />
             </label>
+
+            <label>
+                Square Color:
+                <input type="color" value={squareColor} onChange={handleColorChange} />
+            </label>
+
             <button onClick={startRotation}>Start Rotation</button>
             <button onClick={stopRotation}>Stop Rotation</button>
 
