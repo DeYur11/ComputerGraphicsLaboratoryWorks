@@ -12,8 +12,9 @@ const Animations: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [zoom, setZoom] = useState<number>(1);
     const [targetZoom, setTargetZoom] = useState<number>(1);
-    const [squareColor, setSquareColor] = useState<string>('blue');
-
+    const [squareColor, setSquareColor] = useState<string>('#000000');
+    const [isMoving, setIsMoving] = useState<boolean>(true);
+    const [matrix, setMatrix] = useState<number[][]>([]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -28,7 +29,6 @@ const Animations: React.FC = () => {
         const animate = () => {
             if (isRotating) {
                 setRotationAngle((prevAngle) => prevAngle + 1);
-                console.log("ROTATING");
             }
             draw(ctx);
             if(isRotating) animationFrameId = requestAnimationFrame(animate);
@@ -36,20 +36,38 @@ const Animations: React.FC = () => {
 
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        const gridSize = 50;
+        const gridSize = 50*zoom;
         ctx.beginPath();
         ctx.strokeStyle = '#ccc';
-        for (let x = gridSize; x < ctx.canvas.width; x += gridSize) {
+
+
+        for (let x = ctx.canvas.width/2; x < ctx.canvas.width; x += gridSize) {
             ctx.moveTo(x, 0);
             ctx.lineTo(x, ctx.canvas.height);
 
-            ctx.fillText(`${((x - ctx.canvas.width / 2) / (gridSize*zoom)).toFixed(2)}`, x, ctx.canvas.height / 2 + 10);
+            ctx.fillText(`${((x - ctx.canvas.width / 2) / (gridSize)).toFixed(2)}`, x, ctx.canvas.height / 2 + 10);
         }
-        for (let y = gridSize; y < ctx.canvas.height; y += gridSize) {
+
+
+        for (let x = ctx.canvas.width/2; x > 0; x -= gridSize) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, ctx.canvas.height);
+
+            ctx.fillText(`${((x - ctx.canvas.width / 2) / (gridSize)).toFixed(2)}`, x, ctx.canvas.height / 2 + 10);
+        }
+
+        for (let y = ctx.canvas.height/2; y < ctx.canvas.height; y += gridSize) {
             ctx.moveTo(0, y);
             ctx.lineTo(ctx.canvas.width, y);
 
-            ctx.fillText(`${((ctx.canvas.height / 2 - y) / (gridSize*zoom)).toFixed(2)}`, ctx.canvas.width / 2 - 20, y);
+            ctx.fillText(`${((ctx.canvas.height / 2 - y) / (gridSize)).toFixed(2)}`, ctx.canvas.width / 2 - 20, y);
+        }
+
+        for (let y = ctx.canvas.height/2; y > 0; y -= gridSize) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(ctx.canvas.width, y);
+
+            ctx.fillText(`${((1)*(ctx.canvas.height / 2 - y) / (gridSize)).toFixed(2)}`, ctx.canvas.width / 2 - 20, y);
         }
 
         const arrowLength = 10;
@@ -70,37 +88,63 @@ const Animations: React.FC = () => {
         ctx.moveTo(ctx.canvas.width, ctx.canvas.height / 2 + arrowWidth/2);
         ctx.lineTo(ctx.canvas.width + 2*arrowLength, ctx.canvas.height / 2);
 
-
         ctx.stroke();
 
         animationFrameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(animationFrameId);
-    });  // Added isRotating to dependency array
+    });
+
+
+    const downloadMatrixToFile = () => {
+        // Check if the matrix data is available
+        if (matrix.length === 0) {
+            console.error('Matrix data is empty.');
+            return;
+        }
+
+        // Convert the matrix data to a JSON string
+        const jsonData = JSON.stringify(matrix);
+
+        // Create a Blob object from the JSON data
+        const blob = new Blob([jsonData], { type: 'application/json' });
+
+        // Create a URL for the Blob object
+        const url = URL.createObjectURL(blob);
+
+        // Create an anchor element
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'matrix.json'; // Set the filename for the downloaded file
+
+        // Simulate a click event on the anchor element to trigger the download
+        document.body.appendChild(a);
+        a.click();
+
+        // Remove the anchor element and revoke the URL to free up resources
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
 
     interface Point {
         x: number;
         y: number;
     }
     function findSquarePoints(diagPoint1: Point, diagPoint2: Point): [Point, Point] {
-        // Step 1: Calculate the midpoint of the diagonal
         const midpoint: Point = {
             x: (diagPoint1.x + diagPoint2.x) / 2,
             y: (diagPoint1.y + diagPoint2.y) / 2
         };
 
-        // Step 2: Calculate the vector from one diagonal point to the midpoint
         const vector: Point = {
             x: midpoint.x - diagPoint1.x,
             y: midpoint.y - diagPoint1.y
         };
 
-        // Step 3: Rotate the vector by 90 degrees to get a perpendicular vector
         const perpendicularVector: Point = {
             x: -vector.y,
             y: vector.x
         };
 
-        // Step 4: Add the perpendicular vector to both the midpoint and the other diagonal point
         const squarePoint1: Point = {
             x: midpoint.x + perpendicularVector.x,
             y: midpoint.y + perpendicularVector.y
@@ -119,73 +163,71 @@ const Animations: React.FC = () => {
 
         const size = Math.min(Math.abs(x2 - x1), Math.abs(y2 - y1));
 
-
-
         let trueX1 = x1;
         let trueY1 = y1;
 
         let trueX2 = x2;
         let trueY2 = y2;
 
-
         if(targetZoom != zoom){
+            console.log(x1 - ctx.canvas.width/2);
+
             trueX1 = (x1 - ctx.canvas.width/2)*(zoom/targetZoom) + ctx.canvas.width/2;
             trueY1 = (y1 - ctx.canvas.height/2)*(zoom/targetZoom) + ctx.canvas.height/2;
 
             trueX2 = (x2 - ctx.canvas.width/2)*(zoom/targetZoom) + ctx.canvas.width/2;
             trueY2 = (y2 - ctx.canvas.height/2)*(zoom/targetZoom) + ctx.canvas.height/2;
+
+            if(targetX && targetY) {
+                setTargetX((targetX - ctx.canvas.width/2)*(zoom/targetZoom) + ctx.canvas.width/2);
+                setTargetY((targetY - ctx.canvas.height/2)*(zoom/targetZoom) + ctx.canvas.height/2);
+            }
             setTargetZoom(zoom);
         }
+
 
 
         let centerX = (trueX1 + trueX2) / 2;
         let centerY = (trueY1 + trueY2) / 2;
 
-
-        console.log(trueX1)
-        console.log(x1)
-
         const [squarePoint1, squarePoint2] = findSquarePoints({x: trueX1, y: trueY1}, {x: trueX2, y: trueY2});
-            let squareVertices = [
-                [trueX1-centerX, trueY1-centerY, 1],
-                [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
-                [trueX2-centerX, trueY2-centerY, 1],
-                [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
-            ];
-
-        console.log(squareVertices);
+        let squareVertices = [
+            [(trueX1-centerX), trueY1-centerY, 1],
+            [squarePoint1.x-centerX,squarePoint1.y-centerY, 1],
+            [trueX2-centerX, trueY2-centerY, 1],
+            [squarePoint2.x-centerX, squarePoint2.y-centerY, 1]
+        ];
+        console.log(centerX)
 
         let rotationAngle = 2;
-        // Combined transformation matrix
         let transformedVertices: number[][] = squareVertices;
+
+        let combinedMatrix = [[1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]];
         if(isRotating){
             const transformationMatrix = [
                 [Math.cos(rotationAngle * Math.PI / 180), -Math.sin(rotationAngle * Math.PI / 180), 0],
                 [Math.sin(rotationAngle * Math.PI / 180), Math.cos(rotationAngle * Math.PI / 180), 0],
                 [0, 0, 1]
             ];
-            transformedVertices = multiplyMatrices(transformedVertices, transformationMatrix);
+            combinedMatrix = multiplyMatrices(combinedMatrix, transformationMatrix);
+           // transformedVertices = multiplyMatrices(transformedVertices, transformationMatrix);
         }
 
 
 
-
-
-
-
-        if(targetX != null && targetY != null && Math.abs(centerX - targetX) > 1 && Math.abs(centerY - targetY) > 1){
-            console.log(targetX, targetY)
-            console.log(transformedVertices);
+        if(targetX != null && targetY != null && (Math.abs(centerX - targetX) > 1 || Math.abs(centerY - targetY) > 1) && isMoving){
             const translationMatrix = [
                 [1, 0, 0],
                 [0, 1, 0],
                 [(targetX - centerX)/10, (targetY - centerY)/10, 1]
             ]
-            transformedVertices = multiplyMatrices(transformedVertices, translationMatrix);
-            console.log(transformedVertices);
+            combinedMatrix = multiplyMatrices(combinedMatrix, translationMatrix);
         }
+        setMatrix(combinedMatrix);
+        transformedVertices = multiplyMatrices(transformedVertices, combinedMatrix);
 
-        console.log(transformedVertices);
         transformedVertices[0][0] = transformedVertices[0][0]+centerX
         transformedVertices[0][1] = transformedVertices[0][1]+centerY
         transformedVertices[1][0] = transformedVertices[1][0]+centerX;
@@ -194,7 +236,6 @@ const Animations: React.FC = () => {
         transformedVertices[2][1] = transformedVertices[2][1]+centerY
         transformedVertices[3][0] = transformedVertices[3][0]+centerX;
         transformedVertices[3][1] += centerY;
-
 
         ctx.beginPath();
         ctx.moveTo(transformedVertices[0][0], transformedVertices[0][1]);
@@ -205,10 +246,10 @@ const Animations: React.FC = () => {
         ctx.closePath();
         ctx.fillStyle = squareColor;
         ctx.fill();
-       setX1(transformedVertices[0][0]);
-       setY1(transformedVertices[0][1]);
-       setX2(transformedVertices[2][0]);
-       setY2(transformedVertices[2][1]);
+        setX1(transformedVertices[0][0]);
+        setY1(transformedVertices[0][1]);
+        setX2(transformedVertices[2][0]);
+        setY2(transformedVertices[2][1]);
     };
 
     const multiplyMatrices = (a: number[][], b: number[][]) => {
@@ -238,7 +279,6 @@ const Animations: React.FC = () => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-        console.log("Clicked")
         setTargetX(mouseX);
         setTargetY(mouseY);
     };
@@ -252,13 +292,21 @@ const Animations: React.FC = () => {
     };
 
     const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSquareColor(e.target.value); // Update square color state
+        setSquareColor(e.target.value);
     };
 
     const handleZoomChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<number>>) => {
         const value = parseFloat(e.target.value);
         setter(value || 1);
     };
+
+    const startMoving = () => {
+        setIsMoving(true);
+    }
+
+    const stopMoving = () => {
+        setIsMoving(false);
+    }
 
     return (
         <div>
@@ -291,7 +339,12 @@ const Animations: React.FC = () => {
             <button onClick={startRotation}>Start Rotation</button>
             <button onClick={stopRotation}>Stop Rotation</button>
 
-            <canvas ref={canvasRef} width={500} height={500} style={{ border: '1px solid black' }} onClick={handleClick}></canvas>
+            <button onClick={startMoving}>Start moving</button>
+            <button onClick={stopMoving}>Stop moving</button>
+
+            <button onClick={downloadMatrixToFile}>Download Matrix</button>
+
+            <canvas ref={canvasRef} width={1200} height={1000} style={{ border: '1px solid black' }} onClick={handleClick}></canvas>
         </div>
     );
 };
